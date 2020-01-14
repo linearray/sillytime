@@ -2,6 +2,7 @@ module Sillytime.Parsers where
 
 import              Control.Applicative hiding (many, some)
 import              Control.Category
+import              Control.Monad (void)
 import              Data.Char as Char
 import              Data.Maybe (fromJust)
 import              Data.Text (Text)
@@ -31,34 +32,41 @@ type DayActivity    = (Day, [Activity])
 type Activity       = (NominalDiffTime, Text)
 
 activities :: Parser [DayActivity]
-activities = many activityDayP
+activities = many activityDayP <?> "Activities"
 
 activityDayP :: Parser DayActivity
 activityDayP = do
-    d <- dateP
+    d <- dateP <?> "Date"
     space1
 
-    acts <- many (activityP d)
-    eol
+    acts <- many (activityP d) <?> "Day Activities"
+    void eol <|> eof
 
     pure (d, acts)
 
 
 activityP :: Day -> Parser Activity
 activityP d = do
-    du <- some (durationP d)
-    ac <- Text.pack <$> many printChar
+    du <- some (durationP d) <?> "Activity Duration"
+    ac <- manyTill printChar (choice [ void $ try $ do
+                                        space1
+                                        lookAhead $ durationP d
+                                     , void $ try $ lookAhead eol
+                                     , void $ try $ lookAhead eof
+                                     ]
+                             ) <?> "Description"
 
-    pure (sum du, ac)
+    pure (sum du, Text.pack ac)
 
 durationP :: Day -> Parser NominalDiffTime
 durationP d = do
-    t1@(h1,m1) <- timeP
+    t1@(h1,m1) <- timeP <?> "Start time"
     single '-'
-    t2@(h2,m2) <- timeP
+    t2@(h2,m2) <- timeP <?> "End time"
+    space1
 
     let d1                 = LocalTime       d  $ fromJust $ makeTimeOfDayValid h1 m1 0
-    let d2  | t2 == (24,0) = LocalTime (succ d) $ fromJust $ makeTimeOfDayValid 0   0 0
+    let d2  | t2 == (24,0) = LocalTime (succ d) $ fromJust $ makeTimeOfDayValid  0  0 0
             | t2 < t1      = LocalTime (succ d) $ fromJust $ makeTimeOfDayValid h2 m2 0
             | otherwise    = LocalTime       d  $ fromJust $ makeTimeOfDayValid h2 m2 0
 
@@ -66,20 +74,20 @@ durationP d = do
 
 dateP :: Parser Day
 dateP = do
-    y <- yearP
+    y <- yearP <?> "Year"
     single '/'
-    m <- monthP
+    m <- monthP <?> "Month"
     single '/'
-    d <- dayP
+    d <- dayP <?> "Day"
 
     pure $ fromGregorian y m d
 
 
 timeP :: Parser MyTimeOfDay
 timeP = do
-    h <- hourP
+    h <- hourP <?> "Hour"
     single ':'
-    m <- minuteP
+    m <- minuteP <?> "Minutes"
 
     pure (h, m)
 

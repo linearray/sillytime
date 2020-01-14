@@ -13,4 +13,4 @@ main = do
     c <- readFile $ head args
     case runParser activities (head args) c of
         Left s -> putStrLn $ errorBundlePretty s
-        Right s -> print s
+        Right s -> mapM_ print s
