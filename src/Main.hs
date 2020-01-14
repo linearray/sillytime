@@ -24,7 +24,7 @@ main = do
     case runParser parser (head args) c of
         Left s -> putStrLn $ errorBundlePretty s
         Right (SillyTime fee acts) -> do
-            maybe (putStrLn "No fee\n") print fee
+            maybe (putStrLn "No fee\n") (\f -> print f *> putStr "\n") fee
             let (allActs, total) = foldl' (\(as, total) e -> let (das, t) = calcActivities e in (das ++ as, total+t)) ([],0) acts
             mapM_ putStrLn allActs
             putStrLn $ "\nHours worked: " <> show total
