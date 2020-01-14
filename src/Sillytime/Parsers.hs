@@ -31,14 +31,14 @@ type Mi = Int
 -- won't let me, so I have to use my own type here
 type MyTimeOfDay    = (H, Mi)
 
-type DayActivity    = (Day, [Activity])
+type DayActivities  = (Day, [Activity])
 type Activity       = (NominalDiffTime, Text)
 
 newtype Fee = Fee (Fixed E2) deriving (Eq, Show)
 
 data SillyTime = SillyTime {
     fee         :: Maybe Fee
-  , activities  :: [ DayActivity ]
+  , activities  :: [ DayActivities ]
 }
 
 parser :: Parser SillyTime
@@ -62,10 +62,10 @@ feeP = do
         Left real -> pure $ Fee $ MkFixed $ round (real * 100.0)
         Right int -> pure $ Fee $ MkFixed $ int * 100
 
-activitiesP :: Parser [DayActivity]
+activitiesP :: Parser [DayActivities]
 activitiesP = many activityDayP <?> "Activities"
 
-activityDayP :: Parser DayActivity
+activityDayP :: Parser DayActivities
 activityDayP = do
     d <- dateP <?> "Date"
     space1
