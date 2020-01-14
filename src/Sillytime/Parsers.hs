@@ -4,7 +4,10 @@ import              Control.Applicative hiding (many, some)
 import              Control.Category
 import              Control.Monad (void)
 import              Data.Char as Char
+import              Data.Fixed as Fixed
+import              Data.Fixed (Fixed, E12)
 import              Data.Maybe (fromJust)
+import              Data.Scientific (floatingOrInteger)
 import              Data.Text (Text)
 import qualified    Data.Text as Text
 import              Data.Time.Calendar
@@ -13,7 +16,7 @@ import              Data.Time.LocalTime
 import              Data.Void
 import              Text.Megaparsec
 import              Text.Megaparsec.Char
-import              Text.Megaparsec.Char.Lexer as L
+import qualified    Text.Megaparsec.Char.Lexer as L
 
 type Parser = Parsec Void String
 
@@ -31,8 +34,36 @@ type MyTimeOfDay    = (H, Mi)
 type DayActivity    = (Day, [Activity])
 type Activity       = (NominalDiffTime, Text)
 
-activities :: Parser [DayActivity]
-activities = many activityDayP <?> "Activities"
+newtype Fee = Fee (Fixed E2) deriving (Eq, Show)
+
+data SillyTime = SillyTime {
+    fee         :: Maybe Fee
+  , activities  :: [ DayActivity ]
+}
+
+parser :: Parser SillyTime
+parser = do
+    fee <- optional feeP
+
+    space
+    acts <- activitiesP
+
+    pure $ SillyTime fee acts
+
+
+feeP :: Parser Fee
+feeP = do
+    string "fee:"
+    space
+    fee <- L.scientific
+    eol
+
+    case floatingOrInteger fee :: Either Double Integer of
+        Left real -> pure $ Fee $ MkFixed $ round (real * 100.0)
+        Right int -> pure $ Fee $ MkFixed $ int * 100
+
+activitiesP :: Parser [DayActivity]
+activitiesP = many activityDayP <?> "Activities"
 
 activityDayP :: Parser DayActivity
 activityDayP = do

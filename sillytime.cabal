@@ -29,6 +29,7 @@ executable sillytime
                      , GeneralizedNewtypeDeriving
   build-depends:       base >=4.13 && <4.14
                      , megaparsec
+                     , scientific
                      , text
                      , time
   hs-source-dirs:      src/
