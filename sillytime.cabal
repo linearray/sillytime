@@ -19,7 +19,7 @@ extra-source-files:  CHANGELOG.md
 executable sillytime
   main-is:             Main.hs
   other-modules:       Sillytime.Parsers
-  other-extensions:    OverloadedStrings
+  default-extensions:  OverloadedStrings
                      , ScopedTypeVariables
                      , FlexibleContexts
                      , FlexibleInstances
