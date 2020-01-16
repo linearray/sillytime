@@ -73,9 +73,9 @@ feeP = do
 blockP :: Bool -> Parser Block
 blockP headerMandatory = do
     t <-  if headerMandatory
-        then some (single '#') *> manyTill printChar eol
+        then (++) <$> some (single '#') <*> manyTill printChar eol
         else do
-            title <- optional (some (single '#') *> manyTill printChar eol)
+            title <- optional ((++) <$> some (single '#') <*> manyTill printChar eol)
             pure $ fromMaybe "" title
     space
     as <- activitiesP

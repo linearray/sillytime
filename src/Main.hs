@@ -23,14 +23,23 @@ main = do
 
     case runParser parser (head args) c of
         Left s -> putStrLn $ errorBundlePretty s
+
         Right (SillyTime fee blocks) -> do
             maybe (putStrLn "No fee") (\f -> print f *> putStr "\n") fee
 
             let (strs,totalhours) =
                     foldl' (\(strs, total) b ->
-                        let (blocktitle, (daytexts, blockhours)) = calcBlock b in
-                            (strs ++ (blocktitle : daytexts ++ ["Hours worked: " <> show blockhours <> "\n"])
-                            , total+blockhours))
+                        let (blocktitle, (daytexts, blockhours)) = calcBlock b
+                            hours = "Hours worked: " <> show blockhours
+                            toadd = maybe
+                                        [ hours, "\n" ]
+                                        (\(Fee f) -> [ hours
+                                                     , "Currency units due: " <> show (f * (read (show blockhours) :: Fixed E2))
+                                                     , "\n"
+                                                     ]) fee
+                        in
+                            (strs ++ (blocktitle : daytexts ++ toadd)
+                            , total + blockhours))
                         ([],0)
                         blocks
 
