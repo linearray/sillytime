@@ -2,11 +2,11 @@ module Sillytime.Parsers where
 
 import              Control.Applicative hiding (many, some)
 import              Control.Category
-import              Control.Monad (void)
+import              Control.Monad (void,mzero)
 import              Data.Char as Char
 import              Data.Fixed as Fixed
 import              Data.Fixed (Fixed, E12)
-import              Data.Maybe (fromJust)
+import              Data.Maybe (fromJust, fromMaybe)
 import              Data.Scientific (floatingOrInteger)
 import              Data.Text (Text)
 import qualified    Data.Text as Text
@@ -36,19 +36,26 @@ type Activity       = (NominalDiffTime, Text)
 
 newtype Fee = Fee (Fixed E2) deriving (Eq, Show)
 
+data Block = Block {
+    blockTitle      :: String
+  , blockActivities :: [ DayActivities ]
+}
+
 data SillyTime = SillyTime {
     fee         :: Maybe Fee
-  , activities  :: [ DayActivities ]
+  , blocks      :: [ Block ] -- [activities  :: [ DayActivities ]
 }
 
 parser :: Parser SillyTime
 parser = do
     fee <- optional feeP
+    space -- eat up all whitespace
 
-    space
-    acts <- activitiesP
+    mandatoryBlock <- blockP False
+    otherBlocks <- many (blockP True)
+    eof
 
-    pure $ SillyTime fee acts
+    pure $ SillyTime fee (mandatoryBlock : otherBlocks)
 
 
 feeP :: Parser Fee
@@ -57,10 +64,24 @@ feeP = do
     space
     fee <- L.scientific
     eol
+    space
 
     case floatingOrInteger fee :: Either Double Integer of
         Left real -> pure $ Fee $ MkFixed $ round (real * 100.0)
         Right int -> pure $ Fee $ MkFixed $ int * 100
+
+blockP :: Bool -> Parser Block
+blockP headerMandatory = do
+    t <-  if headerMandatory
+        then some (single '#') *> manyTill printChar eol
+        else do
+            title <- optional (some (single '#') *> manyTill printChar eol)
+            pure $ fromMaybe "" title
+    space
+    as <- activitiesP
+    space
+
+    pure $ Block t as
 
 activitiesP :: Parser [DayActivities]
 activitiesP = many activityDayP <?> "Activities"
