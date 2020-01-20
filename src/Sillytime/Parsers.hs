@@ -101,19 +101,19 @@ activityDayP = do
     space1
 
     acts <- many (activityP d) <?> "Day Activities"
-    void eol <|> eof
+    sc
 
     pure (d, acts)
 
-
+-- FIXME: Beyond ugly
 activityP :: Day -> Parser Activity
 activityP d = do
     du <- some (durationP d) <?> "Activity Duration"
-    ac <- manyTill printChar (choice [ void $ try $ do
+    ac <- manyTill printChar (choice [ void $ try $ lookAhead eol
+                                     , void $ try $ lookAhead eof
+                                     , void $ try $ do
                                         space1
                                         lookAhead $ durationP d
-                                     , void $ try $ lookAhead eol
-                                     , void $ try $ lookAhead eof
                                      ]
                              ) <?> "Description"
 
@@ -124,7 +124,7 @@ durationP d = do
     t1@(h1,m1) <- timeP <?> "Start time"
     single '-'
     t2@(h2,m2) <- timeP <?> "End time"
-    space1
+    sc
 
     let d1                 = LocalTime       d  $ fromJust $ makeTimeOfDayValid h1 m1 0
     let d2  | t2 == (24,0) = LocalTime (succ d) $ fromJust $ makeTimeOfDayValid  0  0 0
