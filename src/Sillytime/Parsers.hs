@@ -120,18 +120,28 @@ activityP d = do
     pure (sum du, Text.pack ac)
 
 durationP :: Day -> Parser NominalDiffTime
-durationP d = do
-    t1@(h1,m1) <- timeP <?> "Start time"
-    single '-'
-    t2@(h2,m2) <- timeP <?> "End time"
-    sc
+durationP d = try startFinish <|> duration
+  where
+    startFinish = do
+        t1@(h1,m1) <- timeP <?> "Start time"
+        single '-'
+        t2@(h2,m2) <- timeP <?> "End time"
+        sc
 
-    let d1                 = LocalTime       d  $ fromJust $ makeTimeOfDayValid h1 m1 0
-    let d2  | t2 == (24,0) = LocalTime (succ d) $ fromJust $ makeTimeOfDayValid  0  0 0
-            | t2 < t1      = LocalTime (succ d) $ fromJust $ makeTimeOfDayValid h2 m2 0
-            | otherwise    = LocalTime       d  $ fromJust $ makeTimeOfDayValid h2 m2 0
+        let d1                 = LocalTime       d  $ fromJust $ makeTimeOfDayValid h1 m1 0
+        let d2  | t2 == (24,0) = LocalTime (succ d) $ fromJust $ makeTimeOfDayValid  0  0 0
+                | t2 < t1      = LocalTime (succ d) $ fromJust $ makeTimeOfDayValid h2 m2 0
+                | otherwise    = LocalTime       d  $ fromJust $ makeTimeOfDayValid h2 m2 0
 
-    pure $ diffLocalTime d2 d1
+        pure $ diffLocalTime d2 d1
+
+    duration = do
+        n <- L.scientific
+        single 'h'
+
+        case floatingOrInteger n :: Either Double Integer of
+            Left real -> pure $ fromInteger $ round (real * 3600.0)
+            Right int -> pure $ fromInteger $ int * 3600
 
 dateP :: Parser Day
 dateP = do
