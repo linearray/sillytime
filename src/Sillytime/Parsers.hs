@@ -58,13 +58,22 @@ parser = do
     pure $ SillyTime fee (mandatoryBlock : otherBlocks)
 
 
+lineComment :: Parser ()
+lineComment = L.skipLineComment "--"
+
+blockComment :: Parser ()
+blockComment = L.skipBlockComment "{-" "-}"
+
+sc :: Parser ()
+sc = L.space space1 lineComment blockComment
+
 feeP :: Parser Fee
 feeP = do
     string "fee:"
-    space
+    sc
     fee <- L.scientific
     eol
-    space
+    sc
 
     case floatingOrInteger fee :: Either Double Integer of
         Left real -> pure $ Fee $ MkFixed $ round (real * 100.0)
@@ -77,9 +86,9 @@ blockP headerMandatory = do
         else do
             title <- optional ((++) <$> some (single '#') <*> manyTill printChar eol)
             pure $ fromMaybe "" title
-    space
+    sc
     as <- activitiesP
-    space
+    sc
 
     pure $ Block t as
 
